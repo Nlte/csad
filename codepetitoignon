@@ -1,0 +1,1 @@
+awk -F","  'BEGIN {OFS=","} { if ($2 == "2" || $3 == "2")  print }' SET1V_01.CSV > exo1_1_bs2.csv

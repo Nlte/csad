@@ -30,7 +30,7 @@ class Dataset(object):
         d["week"] = d.date.dt.week
         d["month"] = d.date.dt.month
         features = np.asarray(d[["day", "hour", "in_id", "out_id"]])
-        targets_flat = np.asarray(d["duration"])
+        targets_flat = np.asarray(d["calls"])
         targets = np.expand_dims(targets_flat, 1)
         return features, targets
 
@@ -51,15 +51,17 @@ class NN(object):
 
     def build(self):
 
-        net = self.linear(self.data, "linear_1", 20)
-        #net = self.linear(net, "linear_2", 4)
+        net = self.linear(self.data, "linear_1", 500)
+        net = self.linear(net, "linear_2", 500)
+        net = self.linear(net, "linear_4", 500)
+        net = self.linear(net, "linear_5", 500)
         net = self.linear(net, "linear_3", 1)
         #prediction, loss = tflearn.models.linear_regression(self.data, self.targets)
         self.result = net
         with tf.name_scope("Loss"):
             loss = tf.contrib.losses.mean_squared_error(net, self.targets)
             #loss = tf.clip_by_value(tf.reduce_mean(euclidean_loss), 1e+9, 1e-9)
-        train_step = tf.train.AdamOptimizer(0.005).minimize(loss)
+        train_step = tf.train.AdamOptimizer(5e-4).minimize(loss)
         tf.scalar_summary("Loss", loss)
 
         self.loss = loss

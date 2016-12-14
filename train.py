@@ -11,7 +11,7 @@ from tensorflow.contrib import learn as tflearn
 from datetime import datetime
 from sklearn import metrics
 
-LOG_DIR = "log"
+LOG_DIR = "logs"
 
 class Dataset(object):
     """Simple dataset wrapper."""
@@ -24,7 +24,7 @@ class Dataset(object):
                         sep=',', quotechar='"', chunksize=batchsize)
 
     def next_batch(self):
-        d = self.reader.next()
+        d = next(self.reader)
         d["day"] = d.date.dt.day
         d["hour"] = d.date.dt.hour
         d["week"] = d.date.dt.week
@@ -62,7 +62,7 @@ class NN(object):
             loss = tf.contrib.losses.mean_squared_error(net, self.targets)
             #loss = tf.clip_by_value(tf.reduce_mean(euclidean_loss), 1e+9, 1e-9)
         train_step = tf.train.AdamOptimizer(5e-4).minimize(loss)
-        tf.scalar_summary("Loss", loss)
+        tf.summary.scalar("Loss", loss)
 
         self.loss = loss
         self.train = train_step
@@ -82,11 +82,11 @@ if __name__ == "__main__":
     model.build()
 
     init_op = tf.global_variables_initializer()
-    merged = tf.merge_all_summaries()
+    merged = tf.summary.merge_all()
 
     with tf.Session() as sess:
 
-        train_writer = tf.train.SummaryWriter(LOG_DIR + '/train', sess.graph)
+        train_writer = tf.summary.FileWriter(LOG_DIR + '/train', sess.graph)
         sess.run(init_op)
 
         features, targets = dataset.next_batch()

@@ -24,7 +24,7 @@ def _timestamp_to_float(t):
 DATA_DIR = "project_data/week_lon_lat_bs"
 
 # Train (7 first weeks)
-train_files = ["exo1_b3_week%s.csv" % i for i in range(1,7)]
+train_files = ["exo1_b1_week%s.csv" % i for i in range(1,7)]
 train_files = [os.path.join(DATA_DIR, f) for f in train_files]
 list_ = []
 for f in train_files:
@@ -36,7 +36,7 @@ calls = df["calls"]
 df = df.drop(["calls", "durations", "year", "in_long", "in_lat", "out_long", "out_lat"], axis = 1)
 
 # Test (last week)
-test_file = os.path.join(DATA_DIR, "exo1_b3_week8.csv")
+test_file = os.path.join(DATA_DIR, "exo1_b1_week8.csv")
 df_test = pd.read_csv(test_file, names=["year", "month", "day", "hour", "in_id",
     "in_long", "in_lat", "out_id", "out_long", "out_lat", "calls", "durations"])
 df_test = df_test.drop(["durations", "year", "in_long", "in_lat", "out_long", "out_lat"], axis = 1)
@@ -124,8 +124,8 @@ print("RFR score %f" % mean_squared_error(y_test, predictions_RFR))
 # Plot
 df_test["predictions_DTR"] = pd.Series(predictions_DTR)
 df_test["predictions_RFR"] = pd.Series(predictions_RFR)
-df_dtr = df_test[["calls", "predictions_DTR"]].groupby([df_test.hour]).sum()
+df_dtr = df_test[["calls", "predictions_DTR"]].groupby([df_test.day%7, df_test.hour]).sum()
 df_dtr.plot()
-df_rfr = df_test[["calls", "predictions_RFR"]].groupby([df_test.hour]).sum()
+df_rfr = df_test[["calls", "predictions_RFR"]].groupby([df_test.day%7, df_test.hour]).sum()
 df_rfr.plot()
 plt.show()

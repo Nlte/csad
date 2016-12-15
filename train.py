@@ -17,7 +17,7 @@ from sklearn import metrics
 tf.app.flags.DEFINE_string("log_dir", "logs",
                             """Log directory.""")
 
-tf.app.flags.DEFINE_integer("batch_size", 64,
+tf.app.flags.DEFINE_integer("batch_size", 16,
                             """Batch size.""")
 
 tf.app.flags.DEFINE_integer("base_station", 1,
@@ -30,27 +30,6 @@ FLAGS = tf.app.flags.FLAGS
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
-class Dataset(object):
-    """Simple dataset wrapper."""
-
-    def __init__(self, filename, batchsize):
-        """Constructor"""
-        # csv textfile reader
-        self.reader = pd.read_csv(filename,
-                        names=['date','out_id', 'in_id', 'calls', 'duration'], parse_dates=['date'],
-                        sep=',', quotechar='"', chunksize=batchsize)
-
-    def next_batch(self):
-        d = next(self.reader)
-        d["day"] = d.date.dt.day
-        d["hour"] = d.date.dt.hour
-        d["week"] = d.date.dt.week
-        d["month"] = d.date.dt.month
-        features = np.asarray(d[["day", "hour", "in_id", "out_id"]])
-        targets_flat = np.asarray(d["calls"])
-        targets = np.expand_dims(targets_flat, 1)
-        return features, targets
-
 
 def build_input_pipeplines(filenames, batch_size):
     filename_queue = tf.train.string_input_producer(filenames)
@@ -59,7 +38,7 @@ def build_input_pipeplines(filenames, batch_size):
     record_defaults = [[1.0]]*12
     year, month, day, hour, in_id, in_long, in_lat, out_id, out_long, out_lat, calls, durations = tf.decode_csv(
         value, record_defaults=record_defaults)
-    features = tf.pack([day, hour, in_id, out_id])
+    features = tf.pack([month, day, hour, in_id, out_id])
     targets = tf.expand_dims(calls, 0)
     feature_batch, target_batch = tf.train.batch([features, targets], batch_size=batch_size)
 
@@ -96,7 +75,7 @@ def main(_):
         tf.gfile.MakeDirs(FLAGS.log_dir)
 
     # Build data pipelines
-    train_files = ["exo1_b%s_week%s.csv" % (FLAGS.base_station, i) for i in range(1,7)]
+    train_files = ["exo1_b%s_week%s.csv" % (FLAGS.base_station, i) for i in range(1,8)]
     train_files = [os.path.join(FLAGS.data_dir, f) for f in train_files]
     train_features, train_targets = build_input_pipeplines(train_files, FLAGS.batch_size)
 
@@ -107,10 +86,10 @@ def main(_):
     test_file = os.path.join(FLAGS.data_dir, "exo1_b%s_week8.csv" % FLAGS.base_station)
     test_df = pd.read_csv(test_file, names=["year", "month", "day", "hour", "in_id",
         "in_long", "in_lat", "out_id", "out_long", "out_lat", "calls", "durations"])
-    test_features = test_df[["day", "hour", "in_id", "out_id"]]
+    test_features = test_df[["month", "day", "hour", "in_id", "out_id"]]
 
     # Define placeholders and model
-    x = tf.placeholder(tf.float32, shape=[None, 4])
+    x = tf.placeholder(tf.float32, shape=[None, 5])
     y_ = tf.placeholder(tf.float32, shape=[None, 1])
     model = NN(x, y_)
     model.build()
@@ -127,7 +106,7 @@ def main(_):
         val_writer = tf.summary.FileWriter(FLAGS.log_dir + "/validation")
         sess.run(init_op)
 
-        for i in range(5000):
+        for i in range(15000):
             # Training
             features, targets = sess.run([train_features, train_targets])
             _, loss, summ = sess.run([model.optimize, model.loss, merged], {x:features, y_:targets})
@@ -148,7 +127,7 @@ def main(_):
         test_df["predictions"] = pd.Series(predictions)
         score = mean_squared_error(test_df["predictions"], test_df["calls"])
         print("MSE: %f" % score)
-        df_test = test_df[["calls", "predictions"]].groupby([test_df.hour]).sum()
+        df_test = test_df[["calls", "predictions"]].groupby([test_df.day%7, test_df.hour]).sum()
         df_test.plot()
         plt.title("Calls semaine 8 base station %s" % FLAGS.base_station)
         plt.show()

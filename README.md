@@ -28,3 +28,11 @@ csad-project/
 or
 
 ``` ipython3 notebook ```
+
+## Run the NN
+
+```
+$ python train.py --base_station 1
+```
+```
+$ tensorboard --logdir logs/
